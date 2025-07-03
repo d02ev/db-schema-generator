@@ -33,4 +33,4 @@ jobs:
     - name: ✅ Run health check test
       run: |
         source .venv/bin/activate
-        python -m pytest tests/health_check.py --maxfail=1 --disable-warnings -q
+        python -m pytest --maxfail=1 --disable-warnings -q
