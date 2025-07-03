@@ -19,4 +19,8 @@ async def test_fail_endpoint():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("api/v1/fail")
         assert response.status_code == 500
-        assert response.json() == { "status_code": 500, "message": "Internal server error", "error": "This is a simulated failure for testing purposes." }
+        assert response.json() == {
+            "status_code": 500,
+            "message": "Internal server error",
+            "error": "This is a simulated failure for testing purposes.",
+        }
