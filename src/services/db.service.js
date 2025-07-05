@@ -8,22 +8,32 @@ import TestConnectionResponse from '../dtos/TestConnectionResponse.dto.js';
 
 export default class DbService {
   constructor(dbUrl) {
-    this.client = new pg.Client({ connectionString: dbUrl })
+    this.client = new pg.Client({ connectionString: dbUrl });
     this.queryHelper = new QueryHelper();
   }
 
   testDbConnection = async () => {
-    await this.client.connect().catch(error => {
-      logger.error(`Failed to connect to the database: ${error.message}`);
-      throw new DbConnectionError(error.message);
-    });
-    const query = this.queryHelper.requestFetchAllSchemasQuery();
-    const schemas = await this.client.query(query).catch(error => {
-      logger.error(`Failed to retrieve schemas: ${error.message}`);
-      throw new QueryExecutionError(error.message);
-    });
-    this.client.end()
-    return new TestConnectionResponse(schemas.rows.map(row => row.schema_name));
+    let connectionSuccessful = false;
+    try {
+      await this.client.connect().catch(error => {
+        logger.error(`Failed to connect to the database: ${error.message}`);
+        throw new DbConnectionError(error.message);
+      });
+      connectionSuccessful = true;
+
+      const query = this.queryHelper.requestFetchAllSchemasQuery();
+      const result = await this.client.query(query).catch(error => {
+        logger.error(`Failed to retrieve schemas: ${error.message}`);
+        throw new QueryExecutionError(error.message);
+      });
+
+      return new TestConnectionResponse(result.rows.map(row => row.schema_name));
+    } finally {
+      // Only call end() if the connection was successful and client has an end method
+      if (connectionSuccessful && this.client && typeof this.client.end === 'function') {
+        this.client.end();
+      }
+    }
   }
 };
 
