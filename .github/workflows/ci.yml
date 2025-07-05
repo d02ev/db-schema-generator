@@ -12,25 +12,22 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.13"]
+        node-version: ['22.x']
 
     steps:
-    - name: 🛎️ Checkout code
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: 🐍 Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Setup Node.js ${{ matrix.node-version }} environment
+      uses: actions/setup-node@v3
       with:
-        python-version: ${{ matrix.python-version }}
+        node-version: ${{ matrix.node-version }}
 
-    - name: 📦 Install dependencies
-      run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        pip install --upgrade pip
-        pip install -r requirements.txt
+    - name: Install dependencies
+      run: npm install
 
-    - name: ✅ Run health check test
-      run: |
-        source .venv/bin/activate
-        python -m pytest --maxfail=1 --disable-warnings -q
+    - name: Lint code
+      run: npm run lint
+
+    - name: Run tests
+      run: npm test
