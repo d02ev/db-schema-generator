@@ -8,7 +8,7 @@ export default class QueryHelper {
       AND schema_name NOT LIKE 'pg_temp%'
       ORDER BY schema_name;
     `;
-  }
+  };
 
   requestFetchAllTablesQuery = () => {
     return `
@@ -18,7 +18,7 @@ export default class QueryHelper {
     `;
   };
 
-  requestFetchColumnsQuery = () => {
+  requestFetchColumnsMetadataQuery = () => {
     return `
       SELECT table_name, column_name, data_type
       FROM information_schema.columns
@@ -37,7 +37,7 @@ export default class QueryHelper {
       AND tc.table_schema = $2
       AND tc.table_name = ANY($3::text[]);
     `;
-  }
+  };
 
   requestFetchFkMetadataQuery = () => {
     return `
@@ -53,4 +53,4 @@ export default class QueryHelper {
       AND tc.table_name = ANY($2::text[]);
     `;
   };
-};
+}

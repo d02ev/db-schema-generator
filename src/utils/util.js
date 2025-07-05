@@ -6,3 +6,10 @@ export const simplifyType = dataType => {
   }
   return dataType;
 };
+
+export const convertTableNamesToArray = tablesNames => {
+  if (tablesNames.length > 1) {
+    return tablesNames.split(',').map(table => table.trim());
+  }
+  return [tablesNames.trim()];
+};

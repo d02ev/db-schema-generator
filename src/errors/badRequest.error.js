@@ -1,4 +1,4 @@
-import HttpStatusCodes from "../enums/httpStatusCodes.enum";
+import HttpStatusCodes from '../enums/httpStatusCodes.enum';
 
 export default class BadRequestError extends Error {
   constructor(message) {

@@ -5,7 +5,7 @@ GET {{BASE_URL}}/health
 Accept: application/json
 Content-Type: application/json
 
-### Test Connection and Fetch Schemas
+### Test Connection
 POST {{BASE_URL}}/db/test-connection
 Accept: application/json
 Content-Type: application/json
@@ -14,13 +14,17 @@ Content-Type: application/json
     "dbUrl": "postgresql://postgres:d02ev@localhost:5432/gen_schema_db"
 }
 
-### Get Metadata
-GET {{BASE_URL}}/db/get-metadata
+### Get Schemas
+GET {{BASE_URL}}/db/get-schemas?dbUrl=postgresql://postgres:d02ev@localhost:5432/gen_schema_db
 Accept: application/json
 Content-Type: application/json
 
-{
-    "db_url": "postgresql://postgres:d02ev@localhost:5432/gen_schema_db",
-    "table_schema": "public",
-    "tables": ["users", "user_profiles", "user_documents"]
-}
+### Get Tables
+GET {{BASE_URL}}/db/get-tables?dbUrl=postgresql://postgres:d02ev@localhost:5432/gen_schema_db&tableSchema=public
+Accept: application/json
+Content-Type: application/json
+
+### Get Diagram Data
+GET {{BASE_URL}}/db/get-diagram-data?dbUrl=postgresql://postgres:d02ev@localhost:5432/gen_schema_db&tableSchema=public&tableNames=users,user_profiles,user_documents
+Accept: application/json
+Content-Type: application/json
