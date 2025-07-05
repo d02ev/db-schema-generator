@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { describe, test, expect } from '@jest/globals';
-import app from '../src/app.js';
-import HttpStatusCodes from '../src/enums/httpStatusCodes.enum.js';
+import app from '../../src/app.js';
+import HttpStatusCodes from '../../src/enums/httpStatusCodes.enum.js';
 
 describe('Health Check Endpoints', () => {
   test('GET /api/v1/health should return 200', async () => {

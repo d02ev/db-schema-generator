@@ -19,7 +19,7 @@ export default class DbService {
         logger.error(`Failed to connect to the database: ${error.message}`);
         throw new DbConnectionError(error.message);
       });
-      connectionSuccessful = true; // Set flag if connect succeeds
+      connectionSuccessful = true;
 
       const query = this.queryHelper.requestFetchAllSchemasQuery();
       const result = await this.client.query(query).catch(error => {
