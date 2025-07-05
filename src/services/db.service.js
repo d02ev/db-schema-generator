@@ -1,10 +1,13 @@
 import pg from 'pg';
-import logger from '../core/logger'
+import logger from '../core/logger';
 import QueryHelper from '../helpers/query.helper';
-import { simplifyType } from '../utils/util.js';
+import { simplifyType, convertTableNamesToArray } from '../utils/util.js';
 import DbConnectionError from '../errors/dbConnection.error.js';
 import QueryExecutionError from '../errors/queryExecution.error.js';
 import TestConnectionResponse from '../dtos/TestConnectionResponse.dto.js';
+import FetchSchemaResponse from '../dtos/FetchSchemaResponse.dto.js';
+import FetchTableResponse from '../dtos/FetchTableResponse.dto.js';
+import FetchMetadataResponse from '../dtos/FetchMetadataResponse.dto.js';
 
 export default class DbService {
   constructor(dbUrl) {
@@ -15,239 +18,164 @@ export default class DbService {
   testDbConnection = async () => {
     let connectionSuccessful = false;
     try {
-      await this.client.connect().catch(error => {
-        logger.error(`Failed to connect to the database: ${error.message}`);
-        throw new DbConnectionError(error.message);
-      });
+      await this.client.connect();
       connectionSuccessful = true;
-
-      const query = this.queryHelper.requestFetchAllSchemasQuery();
-      const result = await this.client.query(query).catch(error => {
-        logger.error(`Failed to retrieve schemas: ${error.message}`);
-        throw new QueryExecutionError(error.message);
-      });
-
-      return new TestConnectionResponse(result.rows.map(row => row.schema_name));
+      return new TestConnectionResponse();
+    } catch (error) {
+      logger.error(`Failed to connect to the database: ${error.message}`);
+      throw new DbConnectionError(error.message);
     } finally {
-      // Only call end() if the connection was successful and client has an end method
       if (connectionSuccessful && this.client && typeof this.client.end === 'function') {
-        this.client.end();
+        await this.client.end();
       }
     }
-  }
-};
+  };
 
-// const { Client } = pg;
-// const queryHelper = new QueryHelper();
+  fetchSchemas = async () => {
+    try {
+      await this.client.connect();
+      const query = this.queryHelper.requestFetchAllSchemasQuery();
+      const result = await this.client.query(query);
+      const schemas = result.rows.map(row => row.schema_name);
+      return new FetchSchemaResponse(schemas);
+    } catch (error) {
+      logger.error(`Failed to retrieve schemas: ${error.message}`);
+      throw new QueryExecutionError(error.message);
+    } finally {
+      if (this.client && typeof this.client.end === 'function') {
+        await this.client.end();
+      }
+    }
+  };
 
-// const fetchSchemas = async client => {
-//   try {
-//     const query = queryHelper.requestFetchAllSchemasQuery();
-//     const result = await client.query(query);
-//     const schemaNames = result.rows.map(row => row.schema_name);
-//     return schemaNames;
-//   } catch (error) {
-//     logger.error(`Failed to retrieve schemas: ${error.message}`);
-//     return [];
-//   }
-// };
+  fetchTables = async schema => {
+    try {
+      await this.client.connect();
+      const query = this.queryHelper.requestFetchAllTablesQuery();
+      const result = await this.client.query(query, [schema]);
+      const tableNames = result.rows.map(row => row.table_name);
+      return new FetchTableResponse(tableNames);
+    } catch (error) {
+      logger.error(`Failed to retrieve tables: ${error.message}`);
+      throw new QueryExecutionError(error.message);
+    } finally {
+      if (this.client && typeof this.client.end === 'function') {
+        await this.client.end();
+      }
+    }
+  };
 
-// export const checkDbConnection = async dbUrl => {
-//   const client = new Client({ connectionString: dbUrl });
+  fetchColumnsMetadata = async (client, schema, tables) => {
+    try {
+      const query = this.queryHelper.requestFetchColumnsMetadataQuery();
+      const result = await client.query(query, [schema, tables]);
+      return result.rows.map(row => ({
+        table_name: row.table_name,
+        column_name: row.column_name,
+        data_type: simplifyType(row.data_type),
+      }));
+    } catch (error) {
+      logger.error(`Failed to retrieve columns metadata: ${error.message}`);
+      throw new QueryExecutionError(error.message);
+    }
+  };
 
-//   try {
-//     await client.connect();
-//     logger.info('Database connection successful.');
-//     const schemas = await fetchSchemas(client);
-//     return [true, schemas];
-//   } catch (error) {
-//     logger.error(`Database connection failed: ${error.message}`);
-//     return [false, []];
-//   } finally {
-//     await client.end();
-//     logger.info('Database connection closed.');
-//   }
-// };
+  fetchConstraintsMetadata = async (client, schema, tables, constraintType) => {
+    try {
+      const query = this.queryHelper.requestFetchConstraintsMetadataQuery();
+      const result = await client.query(query, [constraintType, schema, tables]);
+      const constraintMap = {};
 
-// export const fetchTables = async (dbUrl, schema) => {
-//   const client = new Client({ connectionString: dbUrl });
+      result.rows.forEach(row => {
+        if (!constraintMap[row.table_name]) {
+          constraintMap[row.table_name] = [];
+        }
+        constraintMap[row.table_name].push(row.column_name);
+      });
 
-//   try {
-//     await client.connect();
-//     const query = `
-//       SELECT table_name
-//       FROM information_schema.tables
-//       WHERE table_schema = $1;
-//     `;
-//     const result = await client.query(query, [schema]);
-//     const tableNames = result.rows.map(row => row.table_name);
-//     logger.info(`Retrieved tables: ${tableNames}`);
-//     return tableNames;
-//   } catch (error) {
-//     logger.error(`Failed to retrieve tables: ${error.message}`);
-//     return [];
-//   } finally {
-//     await client.end();
-//   }
-// };
+      return constraintMap;
+    } catch (error) {
+      logger.error(`Failed to retrieve ${constraintType} constraint metadata: ${error.message}`);
+      throw new QueryExecutionError(error.message);
+    }
+  };
 
-// const fetchColumnsMetadata = async (client, schema, tables) => {
-//   try {
-//     const query = `
-//       SELECT table_name, column_name, data_type
-//       FROM information_schema.columns
-//       WHERE table_schema = $1
-//       AND table_name = ANY($2::text[])
-//     `;
-//     const result = await client.query(query, [schema, tables]);
-//     logger.info('Retrieved columns metadata');
-//     return result.rows.map(row => ({
-//       table_name: row.table_name,
-//       column_name: row.column_name,
-//       data_type: row.data_type,
-//     }));
-//   } catch (error) {
-//     logger.error(`Failed to retrieve columns metadata: ${error.message}`);
-//     return [];
-//   }
-// };
+  fetchFkMetadata = async (client, schema, tables) => {
+    try {
+      const query = this.queryHelper.requestFetchFkMetadataQuery();
+      const result = await client.query(query, [schema, tables]);
+      return result.rows.map(row => ({
+        source_table: row.source_table,
+        source_column: row.source_column,
+        target_table: row.target_table,
+        target_column: row.target_column,
+      }));
+    } catch (error) {
+      logger.error(`Failed to retrieve foreign key metadata: ${error.message}`);
+      throw new QueryExecutionError(error.message);
+    }
+  };
 
-// const fetchConstraintsMetadata = async (
-//   client,
-//   schema,
-//   tables,
-//   constraintType
-// ) => {
-//   try {
-//     const query = `
-//       SELECT tc.table_name, kcu.column_name
-//       FROM information_schema.table_constraints AS tc
-//       JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
-//       WHERE tc.constraint_type = $1
-//       AND tc.table_schema = $2
-//       AND tc.table_name = ANY($3::text[])
-//     `;
-//     const result = await client.query(query, [constraintType, schema, tables]);
-//     const constraintMap = {};
+  fetchMetadata = async (schema, tables) => {
+    const tablesArray = convertTableNamesToArray(tables);
 
-//     result.rows.forEach(row => {
-//       if (!constraintMap[row.table_name]) {
-//         constraintMap[row.table_name] = [];
-//       }
-//       constraintMap[row.table_name].push(row.column_name);
-//     });
+    try {
+      await this.client.connect();
+      const columns = await this.fetchColumnsMetadata(this.client, schema, tablesArray);
+      const pk = await this.fetchConstraintsMetadata(this.client, schema, tablesArray, 'PRIMARY KEY');
+      const uniq = await this.fetchConstraintsMetadata(this.client, schema, tablesArray, 'UNIQUE');
+      const fks = await this.fetchFkMetadata(this.client, schema, tablesArray);
 
-//     logger.info(`Retrieved ${constraintType} constraint metadata`);
-//     return constraintMap;
-//   } catch (error) {
-//     logger.error(
-//       `Failed to retrieve ${constraintType} constraint metadata: ${error.message}`
-//     );
-//     return {};
-//   }
-// };
+      const fkMap = {};
+      fks.forEach(fk => {
+        if (!fkMap[fk.source_table]) {
+          fkMap[fk.source_table] = [];
+        }
+        fkMap[fk.source_table].push(fk);
+      });
 
-// const fetchFkMetadata = async (client, schema, tables) => {
-//   try {
-//     const query = `
-//       SELECT tc.table_name AS source_table, kcu.column_name AS source_column,
-//              ccu.table_name AS target_table, ccu.column_name AS target_column
-//       FROM information_schema.table_constraints AS tc
-//       JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name
-//       JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name
-//       WHERE tc.constraint_type = 'FOREIGN KEY'
-//       AND tc.table_schema = $1
-//       AND tc.table_name = ANY($2::text[])
-//     `;
-//     const result = await client.query(query, [schema, tables]);
-//     logger.info('Retrieved foreign key metadata');
-//     return result.rows.map(row => ({
-//       source_table: row.source_table,
-//       source_column: row.source_column,
-//       target_table: row.target_table,
-//       target_column: row.target_column,
-//     }));
-//   } catch (error) {
-//     logger.error(`Failed to retrieve foreign key metadata: ${error.message}`);
-//     return [];
-//   }
-// };
+      const metadata = [];
 
-// export const fetchMetadata = async (dbUrl, schema, tables) => {
-//   const client = new Client({ connectionString: dbUrl });
+      tablesArray.forEach(table => {
+        const foreignKeys = [];
+        const tableFks = fkMap[table] || [];
 
-//   try {
-//     await client.connect();
-//     const columns = await fetchColumnsMetadata(client, schema, tables);
-//     const pk = await fetchConstraintsMetadata(
-//       client,
-//       schema,
-//       tables,
-//       'PRIMARY KEY'
-//     );
-//     const uniq = await fetchConstraintsMetadata(
-//       client,
-//       schema,
-//       tables,
-//       'UNIQUE'
-//     );
-//     const fks = await fetchFkMetadata(client, schema, tables);
+        tableFks.forEach(fk => {
+          const src = fk.source_column;
+          const isUnique = (pk[table] || []).includes(src) || (uniq[table] || []).includes(src);
+          const relType = isUnique ? 'OneToOne' : 'OneToMany';
 
-//     const fkMap = {};
-//     fks.forEach(fk => {
-//       if (!fkMap[fk.source_table]) {
-//         fkMap[fk.source_table] = [];
-//       }
-//       fkMap[fk.source_table].push(fk);
-//     });
+          foreignKeys.push({
+            source_column: src,
+            target_table: fk.target_table,
+            target_column: fk.target_column,
+            relationship_type: relType,
+          });
+        });
 
-//     const metadata = [];
+        const isJoinTable = (pk[table] || []).length === 2 && tableFks.length === 2;
+        const tableMetadata = {
+          table_name: table,
+          columns: columns.filter(col => col.table_name === table),
+          primary_key: pk[table] || [],
+          foreign_keys: foreignKeys,
+        };
 
-//     tables.forEach(table => {
-//       const foreignKeys = [];
-//       const tableFks = fkMap[table] || [];
+        if (isJoinTable) {
+          tableMetadata.relationship_type = 'ManyToMany';
+        }
 
-//       tableFks.forEach(fk => {
-//         const src = fk.source_column;
-//         const isUnique =
-//           (pk[table] || []).includes(src) || (uniq[table] || []).includes(src);
-//         const relType = isUnique ? 'OneToOne' : 'OneToMany';
+        metadata.push(tableMetadata);
+      });
 
-//         foreignKeys.push({
-//           source_column: src,
-//           target_table: fk.target_table,
-//           target_column: fk.target_column,
-//           relationship_type: relType,
-//         });
-//       });
-
-//       const isJoinTable =
-//         (pk[table] || []).length === 2 && tableFks.length === 2;
-//       const tableMetadata = {
-//         table_name: table,
-//         columns: columns
-//           .filter(col => col.table_name === table)
-//           .map(col => ({
-//             column_name: col.column_name,
-//             data_type: simplifyType(col.data_type),
-//           })),
-//         primary_key: pk[table] || [],
-//         foreign_keys: foreignKeys,
-//       };
-
-//       if (isJoinTable) {
-//         tableMetadata.relationship_type = 'ManyToMany';
-//       }
-
-//       metadata.push(tableMetadata);
-//     });
-
-//     logger.info('Retrieved metadata');
-//     return metadata;
-//   } catch (error) {
-//     logger.error(`Failed to retrieve metadata: ${error.message}`);
-//     return [];
-//   } finally {
-//     await client.end();
-//   }
-// };
+      return new FetchMetadataResponse(metadata);
+    } catch (error) {
+      logger.error(`Failed to retrieve metadata: ${error.message}`);
+      throw new QueryExecutionError(error.message);
+    } finally {
+      if (this.client && typeof this.client.end === 'function') {
+        await this.client.end();
+      }
+    }
+  };
+}

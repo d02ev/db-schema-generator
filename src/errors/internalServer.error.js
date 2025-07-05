@@ -1,4 +1,4 @@
-import HttpStatusCodes from "../enums/httpStatusCodes.enum";
+import HttpStatusCodes from '../enums/httpStatusCodes.enum';
 
 export default class InternalServerError extends Error {
   constructor(message) {
