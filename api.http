@@ -1,0 +1,26 @@
+@BASE_URL=http://localhost:5000/api/v1
+
+### Health Check
+GET {{BASE_URL}}/health
+Accept: application/json
+Content-Type: application/json
+
+### Test Connection and Fetch Schemas
+POST {{BASE_URL}}/db/test-connection
+Accept: application/json
+Content-Type: application/json
+
+{
+    "dbUrl": "postgresql://postgres:d02ev@localhost:5432/gen_schema_db"
+}
+
+### Get Metadata
+GET {{BASE_URL}}/db/get-metadata
+Accept: application/json
+Content-Type: application/json
+
+{
+    "db_url": "postgresql://postgres:d02ev@localhost:5432/gen_schema_db",
+    "table_schema": "public",
+    "tables": ["users", "user_profiles", "user_documents"]
+}

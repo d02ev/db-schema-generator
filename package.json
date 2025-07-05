@@ -1,0 +1,65 @@
+{
+  "name": "db-schema-generator",
+  "version": "1.0.0",
+  "description": "Backend API that fetches database schema and generates a JSON schema representation.",
+  "main": "dist/server.js",
+  "type": "commonjs",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start:prod": "node dist/server.js",
+    "start:dev": "dotenv -e src/config/enviroments/dev/.env.development -- nodemon --exec babel-node src/server.js",
+    "build": "babel src -d dist",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.js tests/**/*.js",
+    "lint:fix": "eslint src/**/*.js tests/**/*.js --fix",
+    "prettier": "prettier --write src/**/*.js",
+    "prettier:check": "prettier --check src/**/*.js",
+    "format": "npm run prettier && npm run lint:fix",
+    "precommit": "npm run format && npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/d02ev/db-schema-generator.git"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "api",
+    "database",
+    "schema",
+    "generator"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/d02ev/db-schema-generator/issues"
+  },
+  "homepage": "https://github.com/d02ev/db-schema-generator#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.0.1",
+    "dotenv-cli": "^8.0.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.0",
+    "pg": "^8.16.3",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.0",
+    "@babel/core": "^7.28.0",
+    "@babel/node": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "babel-jest": "^30.0.4",
+    "eslint": "^9.30.1",
+    "jest": "^30.0.4",
+    "nodemon": "^3.1.10",
+    "pg-mem": "^3.0.5",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.1"
+  }
+}
