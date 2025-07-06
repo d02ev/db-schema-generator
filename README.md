@@ -1,6 +1,8 @@
 # DB Schema Generator
 
-A Node.js Express API for generating database schemas with PostgreSQL support.
+A backend API that fetches tables, columns and schema information from the given connection string which is then used by the client to create an ERD diagram.
+
+P.S.: The whole application is stateless and only requires a read permission on the database.
 
 ## Features
 
@@ -8,16 +10,13 @@ A Node.js Express API for generating database schemas with PostgreSQL support.
 - Database connection testing
 - Schema and table listing
 - Metadata extraction with relationships
-- Express.js with Babel for modern JavaScript
-- ESLint and Prettier for code quality
-- Jest for testing
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18.x or higher
-- npm or yarn
+- Node.js 22.x or higher
+- npm
 - PostgreSQL database (for testing connections)
 
 ### Installation
@@ -27,35 +26,25 @@ A Node.js Express API for generating database schemas with PostgreSQL support.
 npm install
 
 # Copy environment configuration
-cp .env.example .env
+cp src/config/.env.sample src/config/dev/.env.development # make sure to change values
 
 # Start development server
 npm run dev
 ```
 
-### Available Scripts
-
-- `npm start` - Start production server
-- `npm run dev` - Start development server with hot reload
-- `npm run build` - Build for production
-- `npm test` - Run tests
-- `npm run test:watch` - Run tests in watch mode
-- `npm run test:coverage` - Run tests with coverage
-- `npm run lint` - Lint code
-- `npm run lint:fix` - Fix linting issues
-- `npm run prettier` - Format code
-- `npm run format` - Format and fix linting issues
-
 ### API Endpoints
 
 #### Health Check
+
 - `GET /api/v1/health` - Health check
 - `GET /api/v1/fail` - Test error handling
 
 #### Database Operations
+
 - `POST /api/v1/db/test-connection` - Test database connection
-- `POST /api/v1/db/get-tables` - Get tables from schema
-- `POST /api/v1/db/get-metadata` - Get table metadata
+- `GET /api/v1/db/get-schemas?dbUrl=...` - Get schemas from connection string
+- `GET /api/v1/db/get-tables?dbUrl=...&tableSchema=...` - Get tables from schema
+- `GET /api/v1/db/get-diagram-data?dbUrl=...&tableSchema=...&tables=...` - Get table diagram data
 
 ### Testing
 
@@ -68,17 +57,6 @@ npm run test:watch
 
 # Run tests with coverage
 npm run test:coverage
-```
-
-## Project Structure
-
-```
-src/
-├── api/v1/         # API routes
-├── core/           # Core utilities (logger, exceptions)
-├── services/       # Business logic
-├── utils/          # Utility functions
-└── index.js        # Application entry point
 ```
 
 ## Configuration
