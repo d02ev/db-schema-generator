@@ -11,7 +11,18 @@ import FetchMetadataResponse from '../dtos/FetchMetadataResponse.dto.js';
 
 export default class DbService {
   constructor(dbUrl) {
-    this.client = new pg.Client({ connectionString: dbUrl });
+    const config = {
+      connectionString: dbUrl,
+    };
+
+    // Simpler check for sslmode to determine if rejectUnauthorized is needed.
+    // The pg library will handle the full parsing of the dbUrl.
+    // We add rejectUnauthorized: false if sslmode is present and not 'disable'.
+    if (dbUrl && dbUrl.includes('sslmode=') && !dbUrl.includes('sslmode=disable')) {
+      config.ssl = { rejectUnauthorized: false };
+    }
+
+    this.client = new pg.Client(config);
     this.queryHelper = new QueryHelper();
   }
 
