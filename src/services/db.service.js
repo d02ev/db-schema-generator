@@ -15,9 +15,6 @@ export default class DbService {
       connectionString: dbUrl,
     };
 
-    // Simpler check for sslmode to determine if rejectUnauthorized is needed.
-    // The pg library will handle the full parsing of the dbUrl.
-    // We add rejectUnauthorized: false if sslmode is present and not 'disable'.
     if (dbUrl && dbUrl.includes('sslmode=') && !dbUrl.includes('sslmode=disable')) {
       config.ssl = { rejectUnauthorized: false };
     }
@@ -133,7 +130,12 @@ export default class DbService {
     try {
       await this.client.connect();
       const columns = await this.fetchColumnsMetadata(this.client, schema, tablesArray);
-      const pk = await this.fetchConstraintsMetadata(this.client, schema, tablesArray, 'PRIMARY KEY');
+      const pk = await this.fetchConstraintsMetadata(
+        this.client,
+        schema,
+        tablesArray,
+        'PRIMARY KEY'
+      );
       const uniq = await this.fetchConstraintsMetadata(this.client, schema, tablesArray, 'UNIQUE');
       const fks = await this.fetchFkMetadata(this.client, schema, tablesArray);
 
